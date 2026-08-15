@@ -1,0 +1,184 @@
+/* ============================================================
+   base.css — reset, the graph paper itself, and type scale.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  min-height: 100dvh;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: var(--t-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+    linear-gradient(var(--grid-bold) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-bold) 1px, transparent 1px);
+  background-size:
+    var(--grid-size) var(--grid-size),
+    var(--grid-size) var(--grid-size),
+    var(--grid-major) var(--grid-major),
+    var(--grid-major) var(--grid-major);
+  background-attachment: fixed;
+  transition: background-color var(--mid) var(--ease), color var(--mid) var(--ease);
+}
+
+/* When editing is unlocked the paper switches to violet-lined draft stock. */
+body.is-unlocked {
+  --grid: rgba(122, 78, 171, .09);
+  --grid-bold: rgba(122, 78, 171, .15);
+}
+
+img, svg { display: block; max-width: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+/* --- headings --------------------------------------------------- */
+h1, h2, h3, h4 { margin: 0; letter-spacing: -.015em; }
+
+h1 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(29px, 5vw, 44px);
+  line-height: 1.04;
+  letter-spacing: -.022em;
+}
+h1 .u {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-size: 100% 2px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  padding-bottom: 2px;
+}
+
+/* The creed. This is the page's thesis, so it gets the display face
+   at full size and a hanging quote mark set into the left margin. */
+.creed { margin: 14px 0 0; padding: 0; position: relative; }
+.creed blockquote {
+  margin: 0; padding: 0;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: clamp(25px, 4.2vw, 40px);
+  line-height: 1.14;
+  letter-spacing: -.022em;
+  text-wrap: balance;
+}
+.creed figcaption {
+  margin-top: 12px;
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.creed figcaption::before { content: "— "; }
+
+
+.wordmark { color: var(--ink); font-weight: 600; letter-spacing: .18em; }
+
+/* ---------- the corona ----------
+   A low sun sitting behind the masthead: one disc, a ring of rays on
+   a very slow rotation, and a horizon wash that fades into the graph
+   paper. It is the only ornament on the page, so it carries the whole
+   identity and everything else stays plain. */
+.sunfield {
+  position: absolute;
+  top: -170px; right: -130px;
+  width: 620px; height: 620px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .85;
+}
+.corona { opacity: .75; transition: opacity var(--slow) var(--ease); }
+.corona .disc { fill: var(--accent); }
+.corona .halo { fill: none; stroke: var(--accent); }
+.corona .ray { stroke: var(--accent); stroke-linecap: round; }
+.corona .rays { animation: turn 240s linear infinite; transform-origin: 310px 310px; }
+@keyframes turn { to { transform: rotate(360deg); } }
+
+.masthead, .creed { position: relative; z-index: 1; }
+
+@media (max-width: 860px) {
+  .sunfield { top: -210px; right: -230px; width: 520px; height: 520px; opacity: .6; }
+}
+@media (prefers-reduced-motion: reduce) { .corona .rays { animation: none; } }
+@media print { .sunfield { display: none; } }
+
+h2 { font-family: var(--serif); font-weight: 600; font-size: 19px; }
+h3 { font-family: var(--serif); font-weight: 600; font-size: 21px; }
+h4 { font-size: 14px; font-weight: 600; letter-spacing: 0; }
+
+p { margin: 0; }
+
+code, kbd {
+  font-family: var(--mono);
+  font-size: .88em;
+}
+kbd {
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  background: var(--card);
+  padding: 1px 5px;
+  font-size: 10.5px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+/* --- utility ---------------------------------------------------- */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: var(--t-eyebrow);
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.hint {
+  font-family: var(--mono);
+  font-size: var(--t-eyebrow);
+  color: var(--ink-soft);
+  letter-spacing: .04em;
+}
+.hidden { display: none !important; }
+.sr {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+
+/* --- focus ring ------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- scrollbars ------------------------------------------------- */
+* { scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb { background: var(--rule); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* --- page-load sequence ----------------------------------------- */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.rise { animation: rise .5s var(--ease-out) both; }
+.rise-1 { animation-delay: .04s; }
+.rise-2 { animation-delay: .10s; }
+.rise-3 { animation-delay: .16s; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}

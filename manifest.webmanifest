@@ -1,0 +1,14 @@
+{
+  "name": "Project Burning Sun",
+  "short_name": "Burning Sun",
+  "description": "Shared study board for the Class 11 and 12 PCM syllabus.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#17090A",
+  "theme_color": "#17090A",
+  "icons": [
+    { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,155 @@
+/* ============================================================
+   tokens.css — the drafting-table palette.
+   Everything downstream reads from here. Change a value once.
+   ============================================================ */
+
+:root {
+  /* --- paper & ink --- */
+  --paper: #FAF9F4;
+  --card: #FFFDF8;
+  --card-sunk: #F6F4EC;
+  --ink: #14304C;
+  --ink-soft: #63788B;
+  --ink-faint: #94A5B3;
+  --rule: rgba(20, 48, 76, .16);
+  --rule-soft: rgba(20, 48, 76, .08);
+
+  /* --- graph paper --- */
+  --grid: rgba(20, 48, 76, .07);
+  --grid-bold: rgba(20, 48, 76, .12);
+  --grid-size: 20px;
+  --grid-major: 100px;
+
+  /* --- status --- */
+  --done: #17795E;
+  --prog: #B8781B;
+  --doubt: #C0392F;
+  --nys: #A2ADB6;
+  --done-wash: rgba(23, 121, 94, .10);
+  --prog-wash: rgba(184, 120, 27, .10);
+  --doubt-wash: rgba(192, 57, 47, .10);
+
+  /* --- semantic --- */
+  --accent: #C0392F;          /* the red pencil */
+  --accent-ink: #FFFDF8;
+  --edit: #7A4EAB;            /* unlocked / admin mode */
+  --edit-wash: rgba(122, 78, 171, .10);
+
+  /* --- type --- */
+  --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "IBM Plex Serif", Iowan Old Style, Georgia, serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --t-eyebrow: 11px;
+  --t-micro: 10.5px;
+  --t-meta: 11.5px;
+  --t-body: 14px;
+  --t-lede: 15px;
+
+  /* --- geometry --- */
+  --gap: 14px;
+  --gap-lg: 22px;
+  --pad: 16px;
+  --maxw: 1180px;
+  --radius: 0px;              /* blueprints do not have rounded corners */
+
+  /* --- motion --- */
+  --ease: cubic-bezier(.4, 0, .2, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --fast: .16s;
+  --mid: .28s;
+  --slow: .55s;
+
+  /* --- elevation (ink shadow, never grey blur) --- */
+  --lift: 0 1px 0 rgba(20, 48, 76, .06), 0 8px 22px -14px rgba(20, 48, 76, .35);
+  --lift-hi: 0 1px 0 rgba(20, 48, 76, .08), 0 18px 40px -20px rgba(20, 48, 76, .45);
+}
+
+/* ---------- Dusk ----------------------------------------------
+   Not an inverted daylight theme. The paper becomes a drafting table
+   under a desk lamp: deep slate, warmer ink, and status colours
+   lifted in luminance so they stay legible at 1am without glaring.
+   ------------------------------------------------------------- */
+[data-theme="dusk"] {
+  --paper: #0E1720;
+  --card: #14212C;
+  --card-sunk: #101A24;
+  --ink: #E8EFF4;
+  --ink-soft: #93A8B9;
+  --ink-faint: #5E7284;
+  --rule: rgba(232, 239, 244, .17);
+  --rule-soft: rgba(232, 239, 244, .075);
+
+  --grid: rgba(140, 190, 225, .045);
+  --grid-bold: rgba(140, 190, 225, .085);
+
+  --done: #3EBE94;
+  --prog: #E5A63F;
+  --doubt: #F2705F;
+  --nys: #5E7284;
+  --done-wash: rgba(62, 190, 148, .13);
+  --prog-wash: rgba(229, 166, 63, .13);
+  --doubt-wash: rgba(242, 112, 95, .13);
+
+  --accent: #F2705F;
+  --accent-ink: #0E1720;
+  --edit: #B695E8;
+  --edit-wash: rgba(182, 149, 232, .15);
+
+  --lift: 0 1px 0 rgba(0, 0, 0, .35), 0 8px 22px -14px rgba(0, 0, 0, .85);
+  --lift-hi: 0 1px 0 rgba(0, 0, 0, .45), 0 20px 46px -22px rgba(0, 0, 0, .95);
+}
+
+/* The completed tick is punched out of the dot, so it has to match the
+   card it sits on rather than the page. */
+[data-theme="dusk"] .b.done::after { border-color: #0E1720; }
+[data-theme="dusk"] .seg.prog,
+[data-theme="dusk"] .seg.doubt { --stripe: rgba(14, 23, 32, .55); }
+
+/* ---------- Burning Sun ---------------------------------------
+   The theme the project is named for. Not a dark mode with orange
+   bolted on: the whole surface is lit from one side, as if the page
+   were paper held up to a low sun. Backgrounds carry a red shift,
+   rules glow rather than divide, and the status marks run through
+   the fire itself — gold for burnt through, orange for still
+   burning, red for where it caught wrong. The four dot shapes stay
+   distinct (tick, half-fill, question mark, dashed ring) because
+   three of these hues sit close together on purpose.
+   ------------------------------------------------------------- */
+[data-theme="sun"] {
+  --paper: #17090A;
+  --card: #22100F;
+  --card-sunk: #1B0C0C;
+  --ink: #FFE9D6;
+  --ink-soft: #CE9C82;
+  --ink-faint: #8E6353;
+  --rule: rgba(255, 150, 84, .24);
+  --rule-soft: rgba(255, 150, 84, .10);
+
+  --grid: rgba(255, 128, 60, .055);
+  --grid-bold: rgba(255, 128, 60, .10);
+
+  --done: #FFC53D;
+  --prog: #FF7A18;
+  --doubt: #E8392B;
+  --nys: #7B5347;
+  --done-wash: rgba(255, 197, 61, .13);
+  --prog-wash: rgba(255, 122, 24, .13);
+  --doubt-wash: rgba(232, 57, 43, .15);
+
+  --accent: #FF7A18;
+  --accent-ink: #17090A;
+  --edit: #FFC53D;
+  --edit-wash: rgba(255, 197, 61, .14);
+
+  --lift: 0 1px 0 rgba(0, 0, 0, .4), 0 10px 26px -14px rgba(255, 90, 20, .35);
+  --lift-hi: 0 1px 0 rgba(0, 0, 0, .5), 0 22px 50px -22px rgba(255, 90, 20, .45);
+}
+
+[data-theme="sun"] .b.done::after { border-color: #17090A; }
+[data-theme="sun"] .seg.prog,
+[data-theme="sun"] .seg.doubt { --stripe: rgba(23, 9, 10, .5); }
+
+/* The corona only burns in its own theme. */
+[data-theme="sun"] .corona { opacity: 1; }
+[data-theme="dusk"] .corona { opacity: .5; }
