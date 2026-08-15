@@ -17,6 +17,16 @@ PIN. It keeps working with no signal and catches up when the connection returns.
 everything: no build command, publish `.`, functions in `netlify/functions`.
 Netlify installs `@netlify/blobs` from `package.json` on its own.
 
+The function is a **v2 function** (`state.mjs`, `export default`). That matters:
+Netlify Blobs configures itself automatically on the v2 runtime, and did not do so
+reliably under the older `exports.handler` style. If you ever see *"Netlify Blobs is
+not configured for this deploy"*, the deploy did not pick up the v2 runtime — deploy
+from Git or the CLI rather than by dropping a folder.
+
+As a last resort the function will also accept explicit credentials: set
+`BLOBS_SITE_ID` (your site ID, under Site configuration → General) and `BLOBS_TOKEN`
+(a personal access token from User settings → Applications) as environment variables.
+
 **From the CLI**
 
 ```bash

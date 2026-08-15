@@ -306,8 +306,8 @@ window.OS = window.OS || {};
             ? '<br>Usually one of: the site was deployed by drag and drop (which skips '
               + '<code>netlify/functions</code>), or the deploy predates it. Deploy from Git or run '
               + '<code>netlify deploy --prod</code>.'
-            : '<br>The function is there but failing. Check the function log in Netlify under '
-              + 'Deploys, and that <code>@netlify/blobs</code> installed.';
+            : '<br>The function is deployed and answering, so this message came from it. '
+              + 'Its function log is under Netlify \u2192 Deploys \u2192 the latest deploy \u2192 Functions.';
           el.innerHTML = '<b>Not connected.</b> ' + why + fixes
             + '<br>Endpoint: <code>' + esc(OS.CONFIG.API) + '</code>'
             + '<br>Until it connects, this browser keeps its own copy and the offline PIN applies.';

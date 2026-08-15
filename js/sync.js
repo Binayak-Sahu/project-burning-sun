@@ -111,8 +111,9 @@ window.OS = window.OS || {};
         }
         if (!res.ok) {
           this.backend = 'error';
-          this.lastError = (data.error || ('Server said ' + res.status))
-            + ' — the function is deployed but not working.';
+          /* The function answered, so its own message is the useful one —
+             pass it through rather than burying it. */
+          this.lastError = data.error || ('Server said ' + res.status + '.');
           return this.backend;
         }
         if (!('doc' in data)) {
