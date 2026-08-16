@@ -166,10 +166,6 @@ days to the active target and you get the **daily quota**. Compare that to your
 declared daily ceiling and the plate returns one of three verdicts: on track,
 tight, or behind.
 
-The **pace** panel ignores estimates entirely and looks only at pomodoros you
-actually logged, so the projected finish date is based on your real behaviour
-rather than your intentions. Expect the two to disagree. That gap is the point.
-
 Every number is editable. Unlock editing, switch the matrix to **Estimates**, and
 type over anything that does not match your experience.
 
@@ -231,6 +227,25 @@ headers must match the book names.
 
 Nothing connects to the sheet — this is a one-time paste. Do it while unlocked and
 the result syncs to everyone.
+
+## Watching someone else's board
+
+Every change stamps the name of whoever made it, and the **Activity** panel turns
+those stamps into a feed: who marked what, who ran which session, how long ago.
+Above it, a roster shows each person, what they have logged today, and when they
+were last seen.
+
+Set your name in **Settings → Your name on this board**. It is stored on your device
+only, never synced, so each person keeps their own and nobody overwrites anybody.
+Unnamed changes show as "Someone".
+
+A watcher needs no PIN — reading is open. Leave the board locked and it stays a
+read-only window onto the work.
+
+One honest limit: only the *latest* change to each cell is kept, so this is a picture
+of recent activity rather than a full audit trail. If a chapter is marked done and
+then unmarked, the feed shows the unmark, not both. Sessions are a real history and
+the last 800 are kept.
 
 ## Backups
 

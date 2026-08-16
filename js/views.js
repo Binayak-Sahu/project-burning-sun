@@ -5,7 +5,7 @@
 window.OS = window.OS || {};
 
 (function () {
-  const { $, qs, qsa, esc, el, toast, pomo, hours } = OS.ui;
+  const { $, qs, qsa, esc, el, toast, pomo, hours, ago } = OS.ui;
   const C = OS.CONFIG;
   const E = OS.Engine;
   const S = OS.Store;
@@ -262,33 +262,65 @@ window.OS = window.OS || {};
   }
 
   /* ============================================================
-     5. Pace analytics
+     5. Activity — who has been doing what
      ============================================================ */
-  function renderPace(pInfo) {
-    const p = pInfo;
-    const hist = E.history(S, C.PACE_WINDOW);
-    const peak = Math.max(p.capacity, ...hist.map(d => d.count), 1);
-    const goal = p.required || p.capacity;
+  const VERB = {
+    Completed: 'finished', 'In Progress': 'started', Doubts: 'flagged a doubt on', NYS: 'reset'
+  };
 
-    $('paceBody').innerHTML = `
-      <div class="chart" role="img" aria-label="Pomodoros logged over the last ${C.PACE_WINDOW} days">
-        ${hist.map(d => {
-          const h = Math.round(d.count / peak * 74);
-          const cls = d.count === 0 ? 'zero' : (d.count < goal ? 'short' : '');
-          return `<div class="col ${d.isToday ? 'today' : ''}" title="${d.key}: ${d.count} pomodoros">
-            <span class="stalk ${cls}" style="height:${Math.max(h, 2)}px"></span>
-            <span class="d">${d.dayNum}</span>
-          </div>`;
+  function renderActivity() {
+    const host = $('activityBody');
+    const me = S.who();
+    $('whoAmI').textContent = me ? 'you are ' + me : 'name yourself in settings';
+
+    const people = S.people().filter(p => p.name);
+    const today = E.effortByPerson(S);
+    const feed = E.activity(S, V.expanded.activity ? 40 : 9);
+
+    const roster = people.length ? `
+      <div class="roster">
+        ${people.slice(0, 4).map(p => `
+          <div class="person ${p.name === me ? 'me' : ''}">
+            <span class="nm">${esc(p.name)}${p.name === me ? ' <span class="tag">you</span>' : ''}</span>
+            <span class="stat">${today[p.name] ? today[p.name] + ' pom today' : 'nothing logged today'}</span>
+            <span class="seen">${esc(ago(p.last))}</span>
+          </div>`).join('')}
+      </div>` : '';
+
+    if (!feed.length) {
+      host.innerHTML = roster + `<p class="none">Nothing has happened on this board yet.
+        Once anyone marks a chapter or runs the timer, it shows up here.</p>`;
+      return;
+    }
+
+    host.innerHTML = roster + `
+      <ol class="feed">
+        ${feed.map(it => {
+          const stDot = it.status ? `<span class="b sm ${C.STATUS_BY_KEY[it.status].cls}"></span>` : '';
+          let text;
+          if (it.kind === 'pomo') {
+            text = `ran a ${it.minutes}-minute session${it.chapter
+              ? ` on <b>${esc(it.chapter.name)}</b>${it.book ? ' · ' + esc(it.book) : ''}` : ''}`;
+          } else if (it.kind === 'del') {
+            text = `deleted <b>${esc(it.chapter.name)}</b>`;
+          } else if (it.kind === 'cover') {
+            text = `marked <b>${esc(it.chapter.name)}</b> as ${esc(it.status.toLowerCase())} in ${esc(it.book)}`;
+          } else {
+            text = `${VERB[it.status] || 'changed'} <b>${esc(it.chapter.name)}</b> · ${esc(it.book)}`;
+          }
+          return `<li class="${it.kind === 'pomo' ? 'pomo' : ''}">
+            <span class="mk">${it.kind === 'pomo' ? '◔' : stDot}</span>
+            <span class="body"><b class="nm">${esc(it.who)}</b> ${text}</span>
+            <span class="when">${esc(ago(it.when))}</span>
+          </li>`;
         }).join('')}
-      </div>
-      <p class="hint">Bars below the line missed the ${goal}/day quota. Amber means you showed up but short.</p>
-      <div class="stats">
-        <div class="stat"><div class="k">7-day avg</div><div class="v">${p.avg7}</div></div>
-        <div class="stat"><div class="k">Streak</div><div class="v">${E.streak(S)}d</div></div>
-        <div class="stat"><div class="k">Lands on</div><div class="v" style="font-size:13px">${
-          p.finishDate ? p.finishDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
-        }</div></div>
-      </div>`;
+      </ol>
+      ${E.activity(S).length > 9
+        ? `<button class="more" data-q="activity">${V.expanded.activity ? 'show fewer' : 'show more'}</button>`
+        : ''}`;
+
+    const more = qs('[data-q="activity"]', host);
+    if (more) more.onclick = () => { V.expanded.activity = !V.expanded.activity; render(); };
   }
 
   /* ============================================================
@@ -510,11 +542,11 @@ window.OS = window.OS || {};
       const minutes = S.state.settings.minutes || C.DEFAULT_MINUTES;
 
       renderChrome(rows, books, all);
-      const { p } = renderCountdown(rows, books);
+      renderCountdown(rows, books);
       renderBookCards(rows, books, minutes);
       renderQueues(rows, books, minutes);
       OS.Timer.render();
-      renderPace(p);
+      renderActivity();
       renderBalance(rows, books, minutes);
       renderMatrix(rows, books, minutes);
     });

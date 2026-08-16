@@ -205,6 +205,15 @@ window.OS = window.OS || {};
         </div>
 
         <div class="field">
+          <label>Your name on this board</label>
+          <input class="input" id="sWho" maxlength="24" placeholder="e.g. Aarav"
+            value="${esc(S.who())}" aria-label="Your name">
+          <span class="help">Stamped on every change you make, so the Activity panel can say who did
+            what. Stored on this device only — each person sets their own, and it never syncs over
+            anyone else's.</span>
+        </div>
+
+        <div class="field">
           <label>Books in play</label>
           <div class="booktoggles" id="bookToggles"></div>
           <p class="help">Switching a book off takes it out of the debt, the queues and the
@@ -322,6 +331,7 @@ window.OS = window.OS || {};
         qs('#sPin', modal).onclick = () => openPin(null, 'set');
 
         qs('#sSave', modal).onclick = () => {
+          S.setWho(qs('#sWho', modal).value);
           S.set('minutes', Math.max(5, +qs('#sMin', modal).value || C.DEFAULT_MINUTES));
           S.set('breakMinutes', Math.max(1, +qs('#sBreak', modal).value || C.DEFAULT_BREAK));
           S.set('capacity', Math.max(1, +qs('#sCap', modal).value || C.DEFAULT_CAPACITY));

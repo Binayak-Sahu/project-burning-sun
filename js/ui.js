@@ -41,6 +41,23 @@ window.OS = window.OS || {};
     return (h >= 10 ? Math.round(h) : Math.round(h * 10) / 10) + 'h';
   }
 
+  /* "12m ago" reads better than a timestamp when you are checking in
+     on someone rather than auditing a log. */
+  function ago(ms) {
+    if (!ms) return '';
+    const secs = Math.round((Date.now() - ms) / 1000);
+    if (secs < 45) return 'just now';
+    if (secs < 90) return 'a minute ago';
+    const mins = Math.round(secs / 60);
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    const days = Math.round(hrs / 24);
+    if (days === 1) return 'yesterday';
+    if (days < 7) return days + ' days ago';
+    return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  }
+
   /* ---------- toasts ---------- */
   function toast(msg, kind) {
     let host = $('toasts');
@@ -71,6 +88,6 @@ window.OS = window.OS || {};
     return () => container.removeEventListener('keydown', onKey);
   }
 
-  OS.ui = { $, qs, qsa, esc, el, toast, plural, pomo, hours, trapFocus };
+  OS.ui = { $, qs, qsa, esc, el, toast, plural, pomo, hours, ago, trapFocus };
   OS.toast = toast;
 })();

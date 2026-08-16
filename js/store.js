@@ -80,6 +80,22 @@ window.OS = window.OS || {};
   /* ---------- the store ---------- */
   const now = () => Date.now();
 
+  /* Who is sitting at this browser. Deliberately NOT part of the synced
+     document — it is a property of the device, not the board, so each
+     person keeps their own name and it never merges away. */
+  const WHO_KEY = 'burning-sun/who';
+  let whoCache = null;
+  function who() {
+    if (whoCache !== null) return whoCache;
+    try { whoCache = localStorage.getItem(WHO_KEY) || ''; }
+    catch (e) { whoCache = ''; }
+    return whoCache;
+  }
+  function setWho(name) {
+    whoCache = String(name || '').trim().slice(0, 24);
+    try { localStorage.setItem(WHO_KEY, whoCache); } catch (e) {}
+  }
+
   const Store = {
     state: null,
     unlocked: false,
@@ -216,6 +232,7 @@ window.OS = window.OS || {};
       this.snapshot();
       ch.books[book].s = status;
       ch.books[book].t = now();
+      ch.books[book].by = who();
       this.persist(); this.emit();
     },
 
@@ -233,6 +250,7 @@ window.OS = window.OS || {};
       this.snapshot();
       ch[col] = status;
       ch[col === 'School' ? 'tS' : 'tC'] = now();
+      ch[col === 'School' ? 'bS' : 'bC'] = who();
       this.persist(); this.emit();
     },
 
@@ -241,6 +259,7 @@ window.OS = window.OS || {};
       this.snapshot();
       ch.books[book].e = Math.max(0, Math.min(99, Math.round(pomos) || 0));
       ch.books[book].t = now();
+      ch.books[book].by = who();
       this.persist(); this.emit();
     },
 
@@ -255,7 +274,8 @@ window.OS = window.OS || {};
         id: uid('c'), subject: data.subject, cls: +data.cls,
         name: data.name.trim(), w: data.w || 1,
         seq: 999, extra: true, books, School: 'NYS', Coaching: 'NYS',
-        t: now(), tS: now(), tC: now(), note: ''
+        t: now(), tS: now(), tC: now(), by: who(), bS: who(), bC: who(),
+        added: now(), note: ''
       };
       this.state.chapters.push(ch);
       this.persist(); this.emit();
@@ -264,7 +284,7 @@ window.OS = window.OS || {};
 
     renameChapter(id, name) {
       const ch = this.chapter(id); if (!ch) return;
-      this.snapshot(); ch.name = name.trim(); ch.t = now();
+      this.snapshot(); ch.name = name.trim(); ch.t = now(); ch.by = who();
       this.persist(); this.emit();
     },
 
@@ -272,7 +292,7 @@ window.OS = window.OS || {};
       const ch = this.chapter(id);
       if (!ch) return null;
       this.snapshot();
-      ch.del = true; ch.dt = now(); ch.t = now();
+      ch.del = true; ch.dt = now(); ch.t = now(); ch.by = who();
       this.persist(); this.emit();
       return ch;
     },
@@ -282,7 +302,10 @@ window.OS = window.OS || {};
       const d = today();
       this.state.log[d] = (this.state.log[d] || 0) + 1;
       this.state.logT[d] = now();
-      this.state.sessions.push({ at: new Date().toISOString(), chapterId: chapterId || null, book: book || null, minutes });
+      this.state.sessions.push({
+        at: new Date().toISOString(), ms: now(), by: who(),
+        chapterId: chapterId || null, book: book || null, minutes
+      });
       if (this.state.sessions.length > 800) this.state.sessions = this.state.sessions.slice(-800);
       this.persist(true); this.emit();
     },
@@ -313,6 +336,25 @@ window.OS = window.OS || {};
     },
     loggedOn(dateStr) { return this.state.log[dateStr] || 0; },
     loggedToday() { return this.loggedOn(today()); },
+
+    who, setWho,
+
+    /* Everyone who has touched this board, most recently first. */
+    people() {
+      const seen = new Map();
+      const note = (name, ms) => {
+        if (!name || !ms) return;
+        if (!seen.has(name) || seen.get(name) < ms) seen.set(name, ms);
+      };
+      this.state.chapters.forEach(ch => {
+        Object.values(ch.books).forEach(c => note(c.by, c.t));
+        note(ch.bS, ch.tS); note(ch.bC, ch.tC); note(ch.by, ch.t);
+      });
+      (this.state.sessions || []).forEach(x => note(x.by, x.ms || Date.parse(x.at)));
+      return [...seen.entries()]
+        .map(([name, last]) => ({ name, last }))
+        .sort((a, b) => b.last - a.last);
+    },
 
     /* ---------- settings ---------- */
     set(path, value) {

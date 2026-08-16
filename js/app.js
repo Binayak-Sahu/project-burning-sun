@@ -66,6 +66,12 @@
     OS.Modals.openPin(pin => {
       S.unlocked = true;
       OS.Sync.rememberPin(String(pin));
+      /* Without a name every change reads as "Someone", which makes the
+         activity feed useless the moment two people share a board. */
+      if (!S.who()) {
+        const name = prompt('Your name, so the board can show who did what:', '');
+        if (name && name.trim()) S.setWho(name);
+      }
       OS.render();
       toast(OS.Sync.mode === 'shared'
         ? 'Editing on — changes go to everyone'

@@ -43,9 +43,14 @@
     out.dt = Math.max(aDel, bDel);
 
     /* Coverage columns carry their own stamps. */
-    out.School = t(b.tS) > t(a.tS) ? b.School : a.School;
+    const schoolFromB = t(b.tS) > t(a.tS);
+    out.School = schoolFromB ? b.School : a.School;
+    out.bS = schoolFromB ? b.bS : a.bS;
     out.tS = Math.max(t(a.tS), t(b.tS));
-    out.Coaching = t(b.tC) > t(a.tC) ? b.Coaching : a.Coaching;
+
+    const coachFromB = t(b.tC) > t(a.tC);
+    out.Coaching = coachFromB ? b.Coaching : a.Coaching;
+    out.bC = coachFromB ? b.bC : a.bC;
     out.tC = Math.max(t(a.tC), t(b.tC));
 
     out.books = {};
@@ -103,7 +108,7 @@
   function dedupeSessions(all) {
     const seen = new Set(), out = [];
     all.forEach(s => {
-      const k = s.at + '|' + (s.chapterId || '') + '|' + (s.book || '');
+      const k = s.at + '|' + (s.by || '') + '|' + (s.chapterId || '') + '|' + (s.book || '');
       if (seen.has(k)) return;
       seen.add(k); out.push(s);
     });

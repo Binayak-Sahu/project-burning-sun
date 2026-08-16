@@ -202,8 +202,60 @@ window.OS = window.OS || {};
     return n;
   }
 
+  /* ---------- who did what, most recent first ----------
+     Assembled from the timestamps already on every field, so it costs
+     no extra storage. The honest limitation: only the *latest* change
+     to a cell is kept, so this is a picture of recent activity, not a
+     full audit trail. Marking a chapter and then unmarking it shows up
+     once, as the unmark. */
+  function activity(store, limit) {
+    const items = [];
+    const label = n => (n && String(n).trim()) || 'Someone';
+
+    store.state.chapters.forEach(ch => {
+      Object.entries(ch.books).forEach(([book, cell]) => {
+        if (!cell.t) return;
+        items.push({
+          when: cell.t, who: label(cell.by), kind: 'mark',
+          chapter: ch, book, status: cell.s
+        });
+      });
+      if (ch.tS) items.push({ when: ch.tS, who: label(ch.bS), kind: 'cover', chapter: ch, book: 'School', status: ch.School });
+      if (ch.tC) items.push({ when: ch.tC, who: label(ch.bC), kind: 'cover', chapter: ch, book: 'Coaching', status: ch.Coaching });
+      if (ch.del && ch.dt) items.push({ when: ch.dt, who: label(ch.by), kind: 'del', chapter: ch });
+    });
+
+    (store.state.sessions || []).forEach(s => {
+      const when = s.ms || Date.parse(s.at);
+      if (!when) return;
+      items.push({
+        when, who: label(s.by), kind: 'pomo',
+        chapter: s.chapterId ? store.chapter(s.chapterId) : null,
+        book: s.book, minutes: s.minutes
+      });
+    });
+
+    items.sort((a, b) => b.when - a.when);
+    return limit ? items.slice(0, limit) : items;
+  }
+
+  /* Pomodoros logged per person on a given day, from the session
+     records rather than the shared daily counter. */
+  function effortByPerson(store, dateStr) {
+    const day = dateStr || new Date().toLocaleDateString('en-CA');
+    const out = {};
+    (store.state.sessions || []).forEach(s => {
+      const when = s.ms || Date.parse(s.at);
+      if (!when) return;
+      if (new Date(when).toLocaleDateString('en-CA') !== day) return;
+      const name = (s.by && String(s.by).trim()) || 'Someone';
+      out[name] = (out[name] || 0) + 1;
+    });
+    return out;
+  }
+
   OS.Engine = {
     daysUntil, fmtDate, cellRemaining, tally, priority,
-    actionQueue, lanes, pace, history, streak
+    actionQueue, lanes, pace, history, streak, activity, effortByPerson
   };
 })();
