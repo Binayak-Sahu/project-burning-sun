@@ -1,7 +1,8 @@
 /* Offline-first cache. Bump CACHE when you ship a change. */
-const CACHE = 'burning-sun-v7';
+const CACHE = 'burning-sun-v9';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './assets/favicon.svg',
+  './assets/icon-180.png', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-maskable-512.png',
   './styles/tokens.css', './styles/base.css', './styles/layout.css', './styles/components.css',
   './js/config.js', './js/seed.js', './js/ui.js', './js/merge.js', './js/store.js',
   './js/sync.js', './js/engine.js', './js/timer.js', './js/views.js',

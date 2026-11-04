@@ -48,6 +48,7 @@ window.OS = window.OS || {};
       const s = S.state;
       return {
         schema: s.schema,
+        epoch: s.epoch || 0,
         chapters: s.chapters,
         settings: s.settings,
         log: s.log,

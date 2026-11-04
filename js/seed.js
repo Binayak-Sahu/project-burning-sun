@@ -37,19 +37,19 @@ OS.SEED = {
       ['Thermodynamics',                            1.0, 'CNNDNN', 'CC'],
       ['Kinetic Theory',                            0.8, 'NNNPNN', 'CC'],
       ['Oscillations',                              1.2, 'PNNNNN', 'CC'],
-      ['Waves',                                     1.2, 'PNPNNN', 'CC']
+      ['Waves',                                     1.2, 'DNPNNN', 'CC']
     ],
     12: [
       ['Electric Charges and Fields',                                       1.2, 'CNCDNN', 'CC'],
       ['Electrostatic Potential and Capacitance',                           1.3, 'CNPDNN', 'CC'],
-      ['Current Electricity',                                               1.2, 'CNCPNN', 'CC'],
-      ['Moving Charges and Magnetism',                                      1.3, 'NNNNNN', 'PP'],
-      ['Magnetism and Matter',                                              0.8, 'NNNNNN', 'NN'],
-      ['Electromagnetic Induction',                                         1.1, 'NNNNNN', 'NN'],
-      ['Alternating Current',                                               1.0, 'NNNNNN', 'NN'],
+      ['Current Electricity',                                               1.2, 'NNCPNN', 'CC'],
+      ['Moving Charges and Magnetism',                                      1.3, 'DNNNNN', 'CC'],
+      ['Magnetism and Matter',                                              0.8, 'DNNNNN', 'CC'],
+      ['Electromagnetic Induction',                                         1.1, 'PNNNNN', 'CC'],
+      ['Alternating Current',                                               1.0, 'DNNNNN', 'CP'],
       ['Electromagnetic Waves',                                             0.5, 'NNNNNN', 'NN'],
-      ['Ray Optics and Optical Instruments',                                1.4, 'NNNNNN', 'NN'],
-      ['Wave Optics',                                                       1.1, 'NNNNNN', 'NN'],
+      ['Ray Optics and Optical Instruments',                                1.4, 'DNNNNN', 'CP'],
+      ['Wave Optics',                                                       1.1, 'NNNNNN', 'DN'],
       ['Dual Nature of Radiation and Matter',                               0.8, 'NNNNNN', 'NN'],
       ['Atoms',                                                             0.7, 'NNNNNN', 'NN'],
       ['Nuclei',                                                            0.8, 'NNNNNN', 'NN'],
@@ -75,18 +75,21 @@ OS.SEED = {
     12: [
       ['Solutions',                                                 1.0, 'CNCN', 'CC'],
       ['Electrochemistry',                                          1.2, 'CNPN', 'CC'],
-      ['Chemical Kinetics',                                         1.0, 'CNNN', 'CN'],
+      ['Chemical Kinetics',                                         1.0, 'CNNN', 'CC'],
       ['Surface Chemistry',                                         0.6, 'NNNN', 'NN'],
       ['General Principles and Processes of Isolation of Elements', 0.6, 'NNNN', 'NN'],
-      ['The p-Block Elements (Groups 15, 16, 17, 18)',              1.3, 'NNNN', 'NN'],
-      ['The d- and f-Block Elements',                               1.0, 'NNNN', 'PN'],
-      ['Coordination Compounds',                                    1.2, 'NNNN', 'NN'],
-      ['Haloalkanes and Haloarenes',                                1.0, 'NNNN', 'NN'],
-      ['Alcohols, Phenols and Ethers',                              1.1, 'NNNN', 'NP'],
-      ['Aldehydes, Ketones and Carboxylic Acids',                   1.3, 'NNNN', 'NN'],
+      ['The p-Block Elements (Groups 15, 16, 17, 18)',              1.3, 'NNNN', 'CC'],
+      ['The d- and f-Block Elements',                               1.0, 'PNNN', 'CC'],
+      ['Coordination Compounds',                                    1.2, 'DNNN', 'CC'],
+      ['Haloalkanes and Haloarenes',                                1.0, 'DNNN', 'CC'],
+      ['Alcohols, Phenols and Ethers',                              1.1, 'CNNN', 'CC'],
+      ['Aldehydes, Ketones and Carboxylic Acids',                   1.3, 'DNNN', 'NN'],
       ['Amines',                                                    1.0, 'NNNN', 'NN'],
-      ['Biomolecules',                                              0.7, 'NNNN', 'NN'],
+      ['Biomolecules',                                              0.7, 'PNNN', 'CC'],
       ['Polymers',                                                  0.5, 'NNNN', 'NN'],
+      /* Deleted on the live board. Kept here because chapter ids are
+         numbered in seed order: removing a row would renumber every
+         chapter after it and break merging with existing boards. */
       ['Chemistry in Everyday Life',                                0.5, 'NNNN', 'NN']
     ]
   },
@@ -101,7 +104,7 @@ OS.SEED = {
       ['Permutations and Combinations',              1.2, 'CNCNN', 'CC'],
       ['Binomial Theorem',                           1.0, 'CNCNN', 'CC'],
       ['Sequences and Series',                       1.2, 'CNCNN', 'CC'],
-      ['Straight Lines',                             1.1, 'CNDNN', 'CC'],
+      ['Straight Lines',                             1.1, 'NNDNN', 'CC'],
       ['Conic Sections',                             1.4, 'CNPNN', 'CC'],
       ['Introduction to Three Dimensional Geometry', 0.5, 'CNPNN', 'CC'],
       ['Limits and Derivatives',                     1.1, 'CNCNN', 'CC'],
@@ -109,18 +112,18 @@ OS.SEED = {
       ['Probability',                                0.9, 'CNPNN', 'CC']
     ],
     12: [
-      ['Relations and Functions',          0.9, 'DNPNN', 'CC'],
+      ['Relations and Functions',          0.9, 'CNPNN', 'CC'],
       ['Inverse Trigonometric Functions',  0.9, 'CCCNN', 'CC'],
       ['Matrices',                         1.0, 'CCDNN', 'CC'],
       ['Determinants',                     1.0, 'CCCNN', 'CC'],
-      ['Continuity and Differentiability', 1.3, 'CNPNN', 'CP'],
-      ['Application of Derivatives',       1.3, 'CNNNN', 'CN'],
-      ['Integrals',                        1.6, 'PNNNN', 'PN'],
-      ['Application of Integrals',         0.8, 'NNNNN', 'NN'],
-      ['Differential Equations',           1.1, 'NNNNN', 'NN'],
-      ['Vector Algebra',                   0.9, 'NNNNN', 'NN'],
+      ['Continuity and Differentiability', 1.3, 'CNPNN', 'CC'],
+      ['Application of Derivatives',       1.3, 'CNNNN', 'CC'],
+      ['Integrals',                        1.6, 'PNNNN', 'CC'],
+      ['Application of Integrals',         0.8, 'CNNNN', 'CC'],
+      ['Differential Equations',           1.1, 'PNNNN', 'CC'],
+      ['Vector Algebra',                   0.9, 'NNNNN', 'CP'],
       ['Three Dimensional Geometry',       1.1, 'NNNNN', 'NN'],
-      ['Linear Programming',               0.5, 'NNNNN', 'NN'],
+      ['Linear Programming',               0.5, 'NNNNN', 'NC'],
       ['Probability',                      0.9, 'NNNNN', 'NN']
     ]
   }

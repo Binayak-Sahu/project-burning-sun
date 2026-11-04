@@ -38,7 +38,7 @@ body.is-unlocked {
 
 img, svg { display: block; max-width: 100%; }
 button, input, select, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; }
+button { cursor: pointer; touch-action: manipulation; }   /* no double-tap zoom delay */
 
 /* --- headings --------------------------------------------------- */
 h1, h2, h3, h4 { margin: 0; letter-spacing: -.015em; }

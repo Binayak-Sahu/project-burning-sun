@@ -14,11 +14,13 @@ window.OS = window.OS || {};
 
   function openModal({ title, body, foot, wide, onMount }) {
     if (closeCurrent) closeCurrent();
+    /* Hand focus back to whatever opened the dialog when it closes. */
+    const opener = document.activeElement;
     const scrim = el('div', { class: 'scrim', role: 'dialog', 'aria-modal': 'true', 'aria-label': title });
     const modal = el('div', { class: 'modal' + (wide ? ' wide' : '') });
     modal.innerHTML = `
       <div class="modal-head"><h3>${esc(title)}</h3>
-        <button class="x" aria-label="Close">✕</button></div>
+        <button class="x" type="button" aria-label="Close">✕</button></div>
       <div class="modal-body">${body}</div>
       ${foot ? `<div class="modal-foot">${foot}</div>` : ''}`;
     scrim.appendChild(modal);
@@ -30,11 +32,22 @@ window.OS = window.OS || {};
       scrim.remove();
       document.removeEventListener('keydown', onEsc, true);
       closeCurrent = null;
+      if (opener && opener.isConnected && typeof opener.focus === 'function') {
+        try { opener.focus({ preventScroll: true }); } catch (e) {}
+      }
     }
     function onEsc(e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } }
 
     qs('.x', modal).onclick = close;
-    scrim.addEventListener('mousedown', e => { if (e.target === scrim) close(); });
+    /* Close on a tap/click that both starts and ends on the backdrop.
+       A press that began elsewhere (a long-press that opened this
+       dialog, a text selection dragged out of a field) never closes it. */
+    let downOnScrim = false;
+    scrim.addEventListener('pointerdown', e => { downOnScrim = e.target === scrim; });
+    scrim.addEventListener('click', e => {
+      if (downOnScrim && e.target === scrim) close();
+      downOnScrim = false;
+    });
     document.addEventListener('keydown', onEsc, true);
     closeCurrent = close;
 
@@ -168,7 +181,7 @@ window.OS = window.OS || {};
           <label>Exam targets</label>
           <div class="targetlist" id="targets"></div>
           <div class="field-row" style="margin-top:8px">
-            <input class="input" id="tLabel" placeholder="JEE Advanced 2027" aria-label="Target name">
+            <input class="input" id="tLabel" maxlength="60" placeholder="JEE Advanced 2027" aria-label="Target name">
             <input class="input" id="tDate" type="date" aria-label="Target date">
             <button class="btn sm" id="tAdd">Add target</button>
           </div>
@@ -178,17 +191,17 @@ window.OS = window.OS || {};
         <div class="field-row">
           <div class="field">
             <label>Pomodoro length</label>
-            <input class="input" id="sMin" type="number" min="5" max="180" value="${s.minutes}">
+            <input class="input" id="sMin" type="number" inputmode="numeric" min="5" max="180" value="${s.minutes}">
             <span class="help">Minutes of focus in one unit.</span>
           </div>
           <div class="field">
             <label>Break length</label>
-            <input class="input" id="sBreak" type="number" min="1" max="60" value="${s.breakMinutes}">
+            <input class="input" id="sBreak" type="number" inputmode="numeric" min="1" max="60" value="${s.breakMinutes}">
             <span class="help">Minutes between units.</span>
           </div>
           <div class="field">
             <label>Daily ceiling</label>
-            <input class="input" id="sCap" type="number" min="1" max="30" value="${s.capacity}">
+            <input class="input" id="sCap" type="number" inputmode="numeric" min="1" max="30" value="${s.capacity}">
             <span class="help">Pomodoros you can honestly sustain.</span>
           </div>
         </div>
@@ -250,8 +263,14 @@ window.OS = window.OS || {};
               html: `<span class="radio"></span>
                 <span class="nm">${esc(t.label)}</span>
                 <span class="dt">${E.fmtDate(t.date)} · ${days === null ? '—' : days + 'd'}</span>
-                <button class="rm" aria-label="Remove ${esc(t.label)}">✕</button>`
+                <button class="rm" type="button" aria-label="Remove ${esc(t.label)}">✕</button>`
             });
+            /* The row is a button-like control: keyboard users can choose
+               a target with Enter or Space, not only with a mouse. */
+            row.setAttribute('role', 'button');
+            row.setAttribute('tabindex', '0');
+            row.setAttribute('aria-pressed', String(t.id === s.activeTarget));
+            row.setAttribute('aria-label', `Use ${t.label}, ${E.fmtDate(t.date)}`);
             row.onclick = e => {
               if (e.target.classList.contains('rm')) {
                 if (s.targets.length === 1) { toast('Keep at least one target', 'bad'); return; }
@@ -259,15 +278,19 @@ window.OS = window.OS || {};
               }
               S.set('activeTarget', t.id); paintTargets(); OS.render();
             };
+            row.onkeydown = e => {
+              if ((e.key === 'Enter' || e.key === ' ') && e.target === row) { e.preventDefault(); row.click(); }
+            };
             host.appendChild(row);
           });
         }
         paintTargets();
 
         qs('#tAdd', modal).onclick = () => {
-          const label = qs('#tLabel', modal).value.trim();
+          const label = qs('#tLabel', modal).value.trim().slice(0, 60);
           const date = qs('#tDate', modal).value;
-          if (!label || !date) { toast('Name and date, both', 'bad'); return; }
+          if (!label || !date) { toast('Give the target a name and a date', 'bad'); return; }
+          if (E.daysUntil(date) === null) { toast('That date could not be read', 'bad'); return; }
           S.addTarget(label, date);
           qs('#tLabel', modal).value = ''; qs('#tDate', modal).value = '';
           paintTargets(); OS.render();
@@ -332,19 +355,29 @@ window.OS = window.OS || {};
 
         qs('#sSave', modal).onclick = () => {
           S.setWho(qs('#sWho', modal).value);
-          S.set('minutes', Math.max(5, +qs('#sMin', modal).value || C.DEFAULT_MINUTES));
-          S.set('breakMinutes', Math.max(1, +qs('#sBreak', modal).value || C.DEFAULT_BREAK));
-          S.set('capacity', Math.max(1, +qs('#sCap', modal).value || C.DEFAULT_CAPACITY));
+          /* Out-of-range numbers are pulled into range, not rejected. */
+          const clamp = (id, lo, hi, dflt) => {
+            const v = Math.round(+qs(id, modal).value);
+            return Number.isFinite(v) && v > 0 ? Math.min(hi, Math.max(lo, v)) : dflt;
+          };
+          const next = {
+            minutes: clamp('#sMin', 5, 180, C.DEFAULT_MINUTES),
+            breakMinutes: clamp('#sBreak', 1, 60, C.DEFAULT_BREAK),
+            capacity: clamp('#sCap', 1, 30, C.DEFAULT_CAPACITY)
+          };
+          Object.entries(next).forEach(([k, v]) => { if (S.state.settings[k] !== v) S.set(k, v); });
           close(); OS.render(); toast('Settings saved', 'good');
         };
 
         qs('#sClear', modal).onclick = () => {
-          if (!confirm('Set every chapter back to “not yet started”? Estimates and chapters stay. Undo with Ctrl+Z.')) return;
-          S.resetProgressOnly(); close(); OS.render(); toast('Progress cleared');
+          OS.ask.confirm('Set every chapter back to “not yet started”? Estimates, chapters and your pomodoro log stay. Undo brings the marks back.', 'Clear progress', () => {
+            S.resetProgressOnly(); OS.render(); toast('Progress cleared — Undo brings it back');
+          });
         };
         qs('#sWipe', modal).onclick = () => {
-          if (!confirm('Wipe chapters, progress and the effort log, back to the shipped syllabus? Your PIN is kept.')) return;
-          S.resetAll(); close(); OS.render(); toast('Back to a clean file');
+          OS.ask.confirm('Wipe chapters, progress and the effort log on every device, back to the shipped syllabus? Your PIN is kept. Undo works until you close this tab, but take a backup first.', 'Reset everything', () => {
+            S.resetAll(); OS.render(); toast('Back to a clean file — Undo brings it back');
+          });
         };
       }
     });
@@ -360,8 +393,8 @@ window.OS = window.OS || {};
       title: 'Backup and restore',
       wide: true,
       body: `
-        <p class="help">Everything lives in this browser only. Export before you clear browsing data,
-        switch phones, or try something reckless.</p>
+        <p class="help">The board keeps one current copy and no version history. Download a backup now
+        and then, and always before a bulk import or a reset.</p>
         <div class="field">
           <label>Your data · ${size} KB · ${S.state.chapters.length} chapters</label>
           <textarea class="input" id="bkText" spellcheck="false" aria-label="Backup JSON">${esc(json)}</textarea>
@@ -373,13 +406,23 @@ window.OS = window.OS || {};
             <button class="btn ghost sm" id="bkPick">Choose a .json file</button>
             <button class="btn ghost sm" id="bkPaste">Restore from the box above</button>
           </div>
-          <span class="help">Restoring replaces everything currently stored. Ctrl+Z undoes it once.</span>
+          <span class="help">Restoring replaces the whole board, on every device. Undo reverses it while this tab stays open.</span>
+        </div>
+
+        <div class="field">
+          <label>Spreadsheet copy</label>
+          <div class="grp">
+            <button class="btn ghost sm" id="bkCsv" type="button">Download chapter sheet (.csv)</button>
+          </div>
+          <span class="help">Every chapter with its School, Coaching and book marks. Opens in Google Sheets or Excel,
+            and pastes straight back in below.</span>
         </div>
 
         <div class="field" style="border-top:1px solid var(--rule);padding-top:16px">
           <label>Paste from your sheet</label>
           <p class="help">Open a tab in Google Sheets, select the header row and everything under it,
-            copy, and paste it here. Marks are matched to chapters by name; anything new gets added.
+            copy, and paste it here. Marks are matched to chapters by name and class (11, 12, XI or XII);
+            anything new gets added. If the paste has a Subject column, that wins over the picker.
             This does not connect to the sheet — it is a one-time paste.</p>
           <div class="field-row" style="margin-bottom:8px">
             <select class="input" id="shSub" aria-label="Which subject is this tab">
@@ -394,15 +437,10 @@ window.OS = window.OS || {};
       foot: `<button class="btn ghost left" id="bkCopy">Copy to clipboard</button>
              <button class="btn" id="bkDown">Download .json</button>`,
       onMount(modal, close) {
-        qs('#bkDown', modal).onclick = () => {
-          const blob = new Blob([S.exportJSON()], { type: 'application/json' });
-          const a = el('a', {
-            href: URL.createObjectURL(blob),
-            download: `burning-sun-${OS.today()}.json`
-          });
-          document.body.appendChild(a); a.click(); a.remove();
-          toast('Backup downloaded', 'good');
-        };
+        qs('#bkDown', modal).onclick = () =>
+          OS.saveFile(`burning-sun-${OS.today()}.json`, S.exportJSON(), 'application/json');
+        qs('#bkCsv', modal).onclick = () =>
+          OS.saveFile(`burning-sun-chapters-${OS.today()}.csv`, S.exportCSV(), 'text/csv');
         qs('#bkCopy', modal).onclick = async () => {
           try {
             await navigator.clipboard.writeText(S.exportJSON());
@@ -417,10 +455,12 @@ window.OS = window.OS || {};
           const f = e.target.files[0]; if (!f) return;
           const fr = new FileReader();
           fr.onload = () => {
-            try {
-              const n = S.importJSON(fr.result);
-              close(); OS.render(); toast(`Restored ${n} chapters`, 'good');
-            } catch (err) { toast(err.message, 'bad'); }
+            OS.ask.confirm(`Replace the whole board, on every device, with “${f.name}”?`, 'Restore', () => {
+              try {
+                const n = S.importJSON(fr.result);
+                OS.render(); toast(`Restored ${n} chapters`, 'good');
+              } catch (err) { toast('That file is not a Burning Sun backup: ' + err.message, 'bad'); }
+            });
           };
           fr.readAsText(f);
         };
@@ -436,9 +476,14 @@ window.OS = window.OS || {};
 
         qs('#bkPaste', modal).onclick = () => {
           try {
-            const n = S.importJSON(qs('#bkText', modal).value);
-            close(); OS.render(); toast(`Restored ${n} chapters`, 'good');
-          } catch (err) { toast(err.message, 'bad'); }
+            JSON.parse(qs('#bkText', modal).value);     // fail early on a broken paste
+          } catch (err) { toast('That box does not contain valid backup JSON.', 'bad'); return; }
+          OS.ask.confirm('Replace the whole board, on every device, with the backup in the box?', 'Restore', () => {
+            try {
+              const n = S.importJSON(qs('#bkText', modal).value);
+              OS.render(); toast(`Restored ${n} chapters`, 'good');
+            } catch (err) { toast(err.message, 'bad'); }
+          });
         };
       }
     });
@@ -457,11 +502,11 @@ window.OS = window.OS || {};
           <div class="field"><label>Class</label>
             <select class="input" id="aCls"><option value="11">XI</option><option value="12">XII</option></select></div>
           <div class="field"><label>Effort weight</label>
-            <input class="input" id="aW" type="number" step="0.1" min="0.2" max="3" value="1">
+            <input class="input" id="aW" type="number" inputmode="decimal" step="0.1" min="0.2" max="3" value="1">
             <span class="help">1.0 is average.</span></div>
         </div>
         <div class="field"><label>Chapter name</label>
-          <input class="input" id="aName" placeholder="Rotational dynamics — extra drilling"></div>`,
+          <input class="input" id="aName" maxlength="120" placeholder="Rotational dynamics — extra drilling"></div>`,
       foot: `<button class="btn" id="aSave">Add chapter</button>`,
       onMount(modal, close) {
         qs('#aSub', modal).value = OS.V.subject === 'All' ? C.SUBJECT_ORDER[0] : OS.V.subject;
@@ -496,7 +541,7 @@ window.OS = window.OS || {};
       ['B', 'Open backup and restore'],
       ['S', 'Open settings'],
       ['A', 'Add a chapter (unlocked)'],
-      ['T', 'Switch daylight / dusk'],
+      ['T', 'Next theme'],
       ['Ctrl + Z', 'Undo the last edit'],
       ['Ctrl + Shift + Z', 'Redo'],
       ['Esc', 'Close, or clear the search'],
@@ -506,9 +551,82 @@ window.OS = window.OS || {};
       title: 'Keyboard shortcuts',
       body: `<div class="keys">${rows.map(r =>
         `<div class="keyrow"><kbd>${esc(r[0])}</kbd><span>${esc(r[1])}</span></div>`).join('')}</div>
-        <p class="help">In the matrix, click a dot to advance its status and shift-click to step back.</p>`
+        <p class="help">In the chapter sheet, click a dot to advance its mark and shift-click to step back.
+          Right-click it, or press and hold on a phone, to pick any of the four marks directly.</p>`
     });
   }
 
-  OS.Modals = { openModal, openPin, openSettings, openBackup, openAddChapter, openShortcuts, get isOpen() { return !!closeCurrent; } };
+  /* ============================================================
+     In-page confirm and text prompts. Native confirm()/prompt() look
+     foreign on phones and are blocked outright in embedded views.
+     ============================================================ */
+  OS.ask = {
+    confirm(message, actionLabel, onYes) {
+      openModal({
+        title: 'Are you sure?',
+        body: `<p class="ask-msg">${esc(message)}</p>`,
+        foot: `<button class="btn ghost" id="askNo" type="button">Cancel</button>
+               <button class="btn danger" id="askYes" type="button">${esc(actionLabel || 'OK')}</button>`,
+        onMount(m, close) {
+          qs('#askNo', m).onclick = close;
+          qs('#askYes', m).onclick = () => { close(); onYes(); };
+          qs('#askNo', m).focus();           // the safe choice has focus
+        }
+      });
+    },
+    text(title, value, onDone, opts) {
+      const o = opts || {};
+      openModal({
+        title,
+        body: `<div class="field"><input class="input" id="askInput" maxlength="${o.maxlength || 120}"
+          value="${esc(value || '')}" aria-label="${esc(title)}" autocomplete="off"></div>`,
+        foot: `<button class="btn ghost" id="askNo" type="button">${esc(o.cancel || 'Cancel')}</button>
+               <button class="btn" id="askYes" type="button">Save</button>`,
+        onMount(m, close) {
+          const inp = qs('#askInput', m);
+          const save = () => { const v = inp.value; close(); onDone(v); };
+          qs('#askNo', m).onclick = close;
+          qs('#askYes', m).onclick = save;
+          inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+          setTimeout(() => inp.select(), 0);
+        }
+      });
+    }
+  };
+
+  /* ---------- the four-mark picker (long-press / right-click) ---------- */
+  function openPicker({ title, sub, current, onPick }) {
+    openModal({
+      title,
+      body: `<p class="help picker-sub">${esc(sub)}</p>
+        <div class="picker" role="group" aria-label="Choose a mark">
+          ${C.STATUSES.map(st => `
+            <button type="button" class="pick" data-pick="${esc(st.key)}" aria-pressed="${st.key === current}">
+              <span class="b ${st.cls}"></span><span>${esc(st.label)}</span>
+            </button>`).join('')}
+        </div>`,
+      onMount(m, close) {
+        qsa('[data-pick]', m).forEach(b => b.onclick = () => { close(); onPick(b.dataset.pick); });
+        const cur = qs('[aria-pressed="true"]', m);
+        if (cur) cur.focus();
+      }
+    });
+  }
+
+  /* Save a text file. The artifact build swaps this for the viewer's
+     own download capability, since plain download links are blocked there. */
+  OS.saveFile = OS.saveFile || function (filename, text, type) {
+    try {
+      const blob = new Blob([text], { type: type || 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = el('a', { href: url, download: filename });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      toast('Downloaded ' + filename, 'good');
+    } catch (e) {
+      toast('This browser would not save the file. Use “Copy to clipboard” instead.', 'bad');
+    }
+  };
+
+  OS.Modals = { openModal, openPicker, openPin, openSettings, openBackup, openAddChapter, openShortcuts, get isOpen() { return !!closeCurrent; } };
 })();

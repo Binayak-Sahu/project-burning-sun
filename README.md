@@ -11,6 +11,48 @@ PIN. It keeps working with no signal and catches up when the connection returns.
 
 ---
 
+## What changed in the polish pass
+
+**Fixed**
+- School and Coaching dots could not be marked at all (the click handler read the wrong attribute).
+- The focus timer crashed on iPhone Safari, which has no `Notification` API, so Start did nothing.
+- The timer rebuilt its own buttons twice a second, which swallowed taps on phones and threw keyboard focus away.
+- Undo also rolled back the pomodoro log, and on the shared board an undo was merged straight back out on the next sync.
+- *Reset everything* and *Restore a backup* did not stick on the shared board; older timestamps lost every merge. Both now bump an `epoch` that wins outright.
+- Removing the last pomodoro of a day (−1) came back on the next sync, and removed sessions reappeared in the activity feed. Removals are now kept as markers that travel.
+- Changing the PIN never synced (the settings stamp was not updated).
+- Pasting a sheet whose Class column says XI/XII added every chapter a second time.
+- Unreadable saved data was silently overwritten; it is now kept under its own key first.
+- After clicking a dot, keyboard and screen-reader focus jumped to the top of the page.
+- Controls that only appeared on mouse hover (the ▸ timer button, ren/del) were invisible on phones.
+- The −1 button matched sessions by UTC date, so before 05:30 IST it could pick yesterday's session.
+- Exam day said "set a target date"; it now says it is exam day.
+- Timer roster and task labels ran into each other on narrow screens.
+
+**Improved**
+- A running timer survives a reload, a closed tab or the phone discarding the page. A block that ran out while the page was gone is logged at the time it actually ended.
+- Phones: the command bar scrolls with the page instead of covering half the screen, tabs and filters swipe sideways, the chapter name stays pinned while marks scroll, every control is at least 44 px, inputs are 16 px so iOS does not zoom, and notches and the home indicator are respected.
+- Hold a dot on a phone, or right-click it on a computer, to pick any of the four marks directly.
+- Confirmations, rename and the name prompt are in-page dialogs instead of browser pop-ups.
+- Colour contrast meets WCAG AA in all three themes.
+- Settings numbers are kept in range instead of accepting 0 or 1000.
+- A toast tells you when a new version has been deployed.
+
+**New**
+- A 14-day effort chart under the timer, against the daily quota.
+- Download the chapter sheet as CSV. It pastes straight back into the importer, which now also reads a Subject column.
+- PNG app icons, so the home-screen icon works on iPhone and Android.
+
+## Install it on your phone
+
+- **iPhone (Safari):** open the site, tap Share, then *Add to Home Screen*.
+- **Android (Chrome):** open the site, tap the ⋮ menu, then *Install app* (or *Add to Home screen*).
+
+It opens full screen and works offline. Changes made offline go up when the connection returns,
+as long as editing is unlocked.
+
+---
+
 ## Deploy to Netlify
 
 **From Git** — push this folder to a repo and connect it. `netlify.toml` sets
@@ -115,11 +157,11 @@ The footer chip is the honest status: *Everyone is up to date*, *Unsaved changes
 ```
 index.html                  markup and script order
 package.json                one dependency, @netlify/blobs
-netlify/functions/state.js  the shared board: read, merge, write
+netlify/functions/state.mjs the shared board: read, merge, write
 netlify.toml                publish dir, headers, SPA redirect
 manifest.webmanifest        installable web app
 sw.js                       offline cache — bump CACHE when you ship
-assets/favicon.svg
+assets/favicon.svg, icon-*.png   tab icon and home-screen icons
 
 styles/tokens.css           colours, type, spacing, motion. Start here.
 styles/base.css             reset, graph-paper background, type scale
@@ -182,7 +224,7 @@ no backend. On Netlify, change `BURN_PIN` and redeploy.
 
 Unlocked, you can click any dot to advance its status (shift-click steps back),
 rename and delete chapters, add new ones, and edit estimates. <kbd>Ctrl</kbd>+<kbd>Z</kbd>
-undoes the last 40 changes.
+undoes the last 40 changes to marks and chapters (pomodoros have their own −1 button).
 
 ## Books in play, and the two phases
 
