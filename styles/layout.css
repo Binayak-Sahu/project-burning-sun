@@ -5,7 +5,10 @@
 .wrap {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 30px 22px 96px;
+  /* Side gutters clear a notch or rounded corner in landscape. */
+  padding-block: 30px calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(22px, env(safe-area-inset-left, 0px));
+  padding-right: max(22px, env(safe-area-inset-right, 0px));
 }
 
 /* --- masthead --------------------------------------------------- */
@@ -125,7 +128,7 @@
 
 .commandbar {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 40;
   margin: 30px 0 0;
   background: var(--paper);
@@ -209,12 +212,28 @@
   .masthead { grid-template-columns: 1fr; }
   .mast-actions { justify-content: flex-start; }
 }
+/* Phones: the command bar wraps to five rows, which as a sticky bar hid
+   half the screen. It scrolls with the page instead, and the tabs and
+   filters become single swipeable rows. */
+@media (max-width: 720px) {
+  .commandbar { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--paper); }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .tab { flex: none; }
+  .filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 12px; }
+  .filters > * { flex: none; }
+  .filters .spacer { display: none; }
+  .searchbox { order: -1; flex: 0 0 min(260px, 70vw); }
+  .sec-head { margin-top: 34px; }
+}
 @media (max-width: 560px) {
-  .wrap { padding: 22px 14px 84px; }
+  .wrap {
+    padding-block: 22px calc(84px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
   .cd-days { font-size: 54px; }
   .gauge { padding: 12px 14px; }
   .gauge .fig { font-size: 21px; }
   #q, #q:focus { width: 100%; min-width: 0; }
-  .searchbox { flex: 1 1 100%; }
   .filters { gap: 8px 12px; }
 }

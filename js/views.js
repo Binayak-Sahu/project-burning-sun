@@ -94,7 +94,8 @@ window.OS = window.OS || {};
       {
         lbl: 'Daily quota',
         fig: p.required === null ? '—' : p.required,
-        sub: p.capacityGap === null ? 'set a target date'
+        sub: p.capacityGap === null
+          ? (p.days === 0 ? 'exam day' : p.days !== null && p.days < 0 ? 'target has passed' : 'set a target date')
           : p.capacityGap > 0 ? '+' + p.capacityGap + ' over your ceiling'
           : Math.abs(p.capacityGap) + ' under your ceiling',
         tone: p.verdict === 'behind' ? 'bad' : p.verdict === 'tight' ? 'warn' : 'good'
@@ -117,6 +118,7 @@ window.OS = window.OS || {};
 
     const verdictText = (() => {
       if (!target) return ['tight', 'No exam date set. <b>Add one</b> and the quota becomes real.'];
+      if (p.days === 0) return ['tight', `<b>${esc(target.label)}</b> is today. No new chapters: read your mistake notes, eat, and go in rested.`];
       if (p.days !== null && p.days < 0) return ['behind', `<b>${target.label}</b> was ${Math.abs(p.days)} days ago. Point this at your next paper.`];
       if (t.remaining === 0) return ['ahead', `Syllabus clear for this view. <b>${target.label}</b> in ${p.days} days — switch to revision passes.`];
       if (p.verdict === 'behind') return ['behind', `At <b>${p.capacity}/day</b> you finish ${p.slipDays > 0 ? p.slipDays + ' days late' : 'short'}. Either raise the ceiling to <b>${p.required}</b> or cut scope.`];
@@ -275,7 +277,8 @@ window.OS = window.OS || {};
 
     const people = S.people().filter(p => p.name);
     const today = E.effortByPerson(S);
-    const feed = E.activity(S, V.expanded.activity ? 40 : 9);
+    const allFeed = E.activity(S);
+    const feed = allFeed.slice(0, V.expanded.activity ? 40 : 9);
 
     const roster = people.length ? `
       <div class="roster">
@@ -315,7 +318,7 @@ window.OS = window.OS || {};
           </li>`;
         }).join('')}
       </ol>
-      ${E.activity(S).length > 9
+      ${allFeed.length > 9
         ? `<button class="more" data-q="activity">${V.expanded.activity ? 'show fewer' : 'show more'}</button>`
         : ''}`;
 
@@ -352,6 +355,16 @@ window.OS = window.OS || {};
     }
 
     const body = $('mbody');
+    /* Re-rendering replaces every button, so note which cell had focus
+       and put it back afterwards — otherwise a keyboard or screen-reader
+       user is thrown to the top of the page after every mark. */
+    const act = document.activeElement;
+    const focusSel = act && body.contains(act)
+      ? (act.dataset.ch ? `.cellbtn[data-ch="${act.dataset.ch}"][data-book="${CSS.escape(act.dataset.book)}"]`
+        : act.dataset.cov ? `.cellbtn[data-cov="${act.dataset.cov}"][data-col="${act.dataset.col}"]`
+        : act.dataset.est ? `.estinput[data-est="${act.dataset.est}"][data-book="${CSS.escape(act.dataset.book)}"]`
+        : null)
+      : null;
     body.innerHTML = '';
 
     if (!list.length) {
@@ -369,7 +382,7 @@ window.OS = window.OS || {};
       if (hasDoubt) tr.classList.add('hot');
 
       const tools = editing
-        ? `<span class="rowtools"><button data-ren="${ch.id}" title="Rename">ren</button><button data-del="${ch.id}" title="Delete">del</button></span>`
+        ? `<span class="rowtools"><button type="button" data-ren="${ch.id}" aria-label="Rename ${esc(ch.name)}">ren</button><button type="button" data-del="${ch.id}" aria-label="Delete ${esc(ch.name)}">del</button></span>`
         : '';
 
       let html = `<td class="ch"><span class="cls">${ch.cls === 11 ? 'XI' : 'XII'}</span>${esc(ch.name)}${tools}` +
@@ -389,9 +402,9 @@ window.OS = window.OS || {};
           const st = C.STATUS_BY_KEY[cell.s];
           const dim = (V.focus && V.focus !== cell.s) ? ' dim' : '';
           html += `<td><span class="cell${dim}">
-            <button class="cellbtn" ${editing ? '' : 'disabled tabindex="-1"'}
+            <button class="cellbtn" type="button" ${editing ? '' : 'disabled tabindex="-1"'}
               data-ch="${ch.id}" data-book="${esc(col)}"
-              title="${esc(col)}: ${st.label}${editing ? ' — click to advance, shift-click to step back' : ''}"
+              title="${esc(col)}: ${st.label}${editing ? ' — click to advance; hold or right-click to choose' : ''}"
               aria-label="${esc(ch.name)} — ${esc(col)}: ${st.label}">
               <span class="b ${st.cls}"></span>
             </button></span></td>`;
@@ -399,9 +412,10 @@ window.OS = window.OS || {};
           const v = ch[col] || 'NYS';
           const st = C.STATUS_BY_KEY[v];
           html += `<td><span class="cell">
-            <button class="cellbtn" ${editing ? '' : 'disabled tabindex="-1"'}
+            <button class="cellbtn" type="button" ${editing ? '' : 'disabled tabindex="-1"'}
               data-cov="${ch.id}" data-col="${col}"
-              title="${col}: ${st.label}" aria-label="${esc(ch.name)} — ${col}: ${st.label}">
+              title="${col}: ${st.label}${editing ? ' — click to advance; hold or right-click to choose' : ''}"
+              aria-label="${esc(ch.name)} — taught in ${col}: ${st.label}">
               <span class="b sm ${st.cls}"></span>
             </button></span></td>`;
         }
@@ -412,38 +426,144 @@ window.OS = window.OS || {};
       body.appendChild(tr);
     });
 
-    /* wiring */
-    qsa('.cellbtn[data-ch]', body).forEach(btn => {
-      btn.onclick = e => {
-        if (!S.unlocked) return;
-        S.cycleStatus(btn.dataset.ch, btn.dataset.book, e.shiftKey);
-        const dot = qs('.b', btn);
-        if (dot) { dot.classList.add('stamped'); setTimeout(() => dot.classList.remove('stamped'), 340); }
-      };
-    });
-    qsa('.cellbtn[data-cov]', body).forEach(btn => {
-      btn.onclick = e => {
-        if (!S.unlocked) return;
-        const ch = S.chapter(btn.dataset.ch);
-        const keys = C.STATUS_KEYS;
-        const i = keys.indexOf(ch[btn.dataset.col] || 'NYS');
-        S.setCoverage(btn.dataset.ch, btn.dataset.col, keys[(i + (e.shiftKey ? -1 : 1) + keys.length) % keys.length]);
-      };
-    });
+    if (focusSel) { const f = qs(focusSel, body); if (f) f.focus({ preventScroll: true }); }
+
+    /* wiring — one delegated set of listeners on the table body.
+       Click advances, shift-click steps back. Phones have no shift key,
+       so holding a dot (or right-clicking on a computer) opens a picker
+       with all four marks. */
+    if (!body.dataset.wired) {
+      body.dataset.wired = '1';
+      let pressTimer = null, pressed = null, startXY = null, suppressClick = false, longFired = false;
+      const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; pressed = null; };
+
+      body.addEventListener('click', e => {
+        const btn = e.target.closest('.cellbtn');
+        if (!btn || !S.unlocked) return;
+        if (suppressClick) { suppressClick = false; return; }
+        if (btn.dataset.ch) {
+          S.cycleStatus(btn.dataset.ch, btn.dataset.book, e.shiftKey);
+        } else if (btn.dataset.cov) {
+          /* Coverage buttons carry the chapter id in data-cov, not data-ch. */
+          const ch = S.chapter(btn.dataset.cov);
+          if (!ch) return;
+          const keys = C.STATUS_KEYS;
+          const i = keys.indexOf(ch[btn.dataset.col] || 'NYS');
+          S.setCoverage(ch.id, btn.dataset.col, keys[(i + (e.shiftKey ? -1 : 1) + keys.length) % keys.length]);
+        }
+      });
+      body.addEventListener('contextmenu', e => {
+        const btn = e.target.closest('.cellbtn');
+        if (!btn || !S.unlocked) return;
+        e.preventDefault();
+        cancelPress();
+        openPickerFor(btn);
+      });
+      body.addEventListener('pointerdown', e => {
+        const btn = e.target.closest('.cellbtn');
+        if (!btn || !S.unlocked || e.pointerType === 'mouse') return;
+        pressed = btn; startXY = [e.clientX, e.clientY];
+        pressTimer = setTimeout(() => {
+          if (!pressed) return;
+          suppressClick = true;                 // the finger lifting must not also cycle it
+          longFired = true;
+          setTimeout(() => { suppressClick = false; longFired = false; }, 800);
+          openPickerFor(pressed);
+          cancelPress();
+        }, 450);
+      });
+      body.addEventListener('pointermove', e => {
+        if (pressed && startXY && Math.hypot(e.clientX - startXY[0], e.clientY - startXY[1]) > 10) cancelPress();
+      });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => body.addEventListener(t, cancelPress));
+      /* Stop the browser turning the lifted finger into mouse events,
+         which would land on the picker's backdrop. */
+      body.addEventListener('touchend', e => { if (longFired) { e.preventDefault(); longFired = false; } }, { passive: false });
+    }
     qsa('.estinput', body).forEach(inp => {
       inp.onchange = () => S.setEstimate(inp.dataset.est, inp.dataset.book, +inp.value);
     });
     qsa('[data-ren]', body).forEach(b => b.onclick = () => {
       const ch = S.chapter(b.dataset.ren);
-      const name = prompt('Rename chapter', ch.name);
-      if (name && name.trim()) { S.renameChapter(ch.id, name); toast('Renamed', 'good'); }
+      OS.ask.text('Rename chapter', ch.name, name => {
+        if (name && name.trim()) { S.renameChapter(ch.id, name); toast('Renamed', 'good'); }
+      }, { maxlength: 120 });
     });
     qsa('[data-del]', body).forEach(b => b.onclick = () => {
       const ch = S.chapter(b.dataset.del);
-      if (!confirm(`Delete “${ch.name}” (${ch.subject} · Class ${ch.cls})? Undo with Ctrl+Z.`)) return;
-      S.removeChapter(ch.id);
-      toast('Chapter deleted — Ctrl+Z to bring it back');
+      OS.ask.confirm(`Delete “${ch.name}” (${ch.subject} · Class ${ch.cls})? Its marks go with it. Undo brings it back.`, 'Delete chapter', () => {
+        S.removeChapter(ch.id);
+        toast('Chapter deleted — Undo brings it back');
+      });
     });
+  }
+
+  /* Open the four-mark picker for one matrix cell. */
+  function openPickerFor(btn) {
+    const isCov = !!btn.dataset.cov;
+    const ch = S.chapter(isCov ? btn.dataset.cov : btn.dataset.ch);
+    if (!ch) return;
+    const key = isCov ? btn.dataset.col : btn.dataset.book;
+    const current = isCov ? (ch[key] || 'NYS') : (ch.books[key] && ch.books[key].s);
+    OS.Modals.openPicker({
+      title: ch.name,
+      sub: isCov ? 'Taught in ' + key : key,
+      current,
+      onPick: status => {
+        if (isCov) S.setCoverage(ch.id, key, status);
+        else S.setStatus(ch.id, key, status);
+        setTimeout(() => {
+          const sel = isCov
+            ? `.cellbtn[data-cov="${ch.id}"][data-col="${key}"]`
+            : `.cellbtn[data-ch="${ch.id}"][data-book="${CSS.escape(key)}"]`;
+          const again = qs(sel, $('mbody'));
+          if (again) again.focus({ preventScroll: true });
+        }, 60);
+      }
+    });
+  }
+
+  /* ============================================================
+     6b. Pace chart — pomodoros per day against the quota
+     ============================================================ */
+  function renderPace() {
+    const host = $('paceChart');
+    if (!host) return;
+    const n = C.PACE_WINDOW || 14;
+    const days = E.history(S, n);
+    const p = OS.lastPace || {};
+    const quota = p.required || S.state.settings.capacity || C.DEFAULT_CAPACITY;
+    const max = Math.max(quota, ...days.map(d => d.count), 1);
+    const total = days.reduce((a, d) => a + d.count, 0);
+    const met = days.filter(d => d.count >= quota).length;
+
+    const W = 300, H = 92, top = 14, base = 70, slot = W / n, bw = Math.max(6, slot * 0.58);
+    const y = v => base - (v / max) * (base - top);
+    const bars = days.map((d, i) => {
+      const x = i * slot + (slot - bw) / 2;
+      const h = Math.max(d.count ? 2 : 0, base - y(d.count));
+      const cls = d.count >= quota ? 'met' : d.count ? 'part' : 'zero';
+      return `<g class="day${d.isToday ? ' today' : ''}">
+        ${d.count ? `<rect class="${cls}" x="${x.toFixed(1)}" y="${(base - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}"></rect>`
+                  : `<rect class="zero" x="${x.toFixed(1)}" y="${base - 1}" width="${bw.toFixed(1)}" height="1"></rect>`}
+        <text class="dn" x="${(x + bw / 2).toFixed(1)}" y="${base + 13}" text-anchor="middle">${d.dayNum}</text>
+        ${d.isToday ? `<text class="tl" x="${(x + bw / 2).toFixed(1)}" y="${base + 22}" text-anchor="middle">today</text>` : ''}
+      </g>`;
+    }).join('');
+    const qy = y(quota).toFixed(1);
+
+    host.innerHTML = `
+      <div class="pace-head">
+        <span class="lbl">Last ${n} days</span>
+        <span class="fig">${total} pom · ${met}/${n} days at quota</span>
+      </div>
+      <svg viewBox="0 0 ${W} ${H + 4}" role="img"
+        aria-label="Pomodoros logged per day over the last ${n} days: ${total} in total, quota of ${quota} met on ${met} days. Today: ${days[n - 1].count}.">
+        <line class="base" x1="0" x2="${W}" y1="${base + .5}" y2="${base + .5}"></line>
+        ${bars}
+        <line class="quota" x1="0" x2="${W}" y1="${qy}" y2="${qy}"></line>
+        <text class="ql" x="${W}" y="${Math.max(9, qy - 4)}" text-anchor="end">quota ${quota}</text>
+      </svg>`;
   }
 
   /* ============================================================
@@ -545,7 +665,9 @@ window.OS = window.OS || {};
       renderCountdown(rows, books);
       renderBookCards(rows, books, minutes);
       renderQueues(rows, books, minutes);
-      OS.Timer.render();
+      OS.Timer.invalidate();
+      OS.Timer.render(true);
+      renderPace();
       renderActivity();
       renderBalance(rows, books, minutes);
       renderMatrix(rows, books, minutes);

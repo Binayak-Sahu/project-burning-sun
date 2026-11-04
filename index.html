@@ -9,7 +9,11 @@
 
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="assets/favicon.svg">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Burning Sun">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,7 +63,7 @@
       <button class="lockchip" id="lockBtn" type="button" aria-pressed="false">
         <span class="key">◇</span><span>Read only</span>
       </button>
-      <button class="iconbtn" id="themeBtn" type="button" title="Daylight / dusk (T)" aria-label="Switch between daylight and dusk">◐</button>
+      <button class="iconbtn" id="themeBtn" type="button" title="Next theme (T)" aria-label="Next theme">◐</button>
       <button class="iconbtn" id="settingsBtn" type="button" title="Settings (S)" aria-label="Settings">⚙</button>
       <button class="iconbtn" id="backupBtn" type="button" title="Backup and restore (B)" aria-label="Backup and restore">⇅</button>
       <button class="iconbtn" id="printBtn" type="button" title="Print" aria-label="Print">⎙</button>
@@ -128,6 +132,7 @@
     <div class="card timer" id="timerCard">
       <h4>Focus timer</h4>
       <div id="timerBody"></div>
+      <div class="pace" id="paceChart"></div>
     </div>
     <div class="card activity">
       <h4>Activity<span class="who" id="whoAmI"></span></h4>
@@ -165,7 +170,8 @@
   <div class="legend" id="legend" aria-label="Filter by status"></div>
 
   <p class="note">
-    Click a dot to advance it, shift-click to step back — editing must be unlocked first
+    Click a dot to advance it, shift-click to step back, or right-click it (press and hold on a
+    phone) to pick a mark directly. Editing must be unlocked first
     (<kbd>L</kbd>, default PIN <code>1234</code>). Filters live in the address bar, so a bookmark
     remembers exactly this view. Changes save to the shared board for everyone, and to this browser so it keeps working offline. Still worth taking
     <button class="more" id="noteBackup" type="button" style="margin:0;display:inline">a backup</button>

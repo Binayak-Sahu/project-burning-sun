@@ -11,6 +11,14 @@
    their work. Two people editing the same cell within the same poll
    window is the only case where one edit loses, and the later one
    wins — which is what you would expect.
+
+   Two things are deliberately NOT merged:
+     - epoch: "Reset everything" and "Restore a backup" replace the whole
+       board. They bump `epoch`, and a copy with a higher epoch wins
+       outright, so a reset cannot be undone by a stale device's merge.
+     - tombstones: a removed pomodoro (session.x) and a day whose count
+       went back to zero (logT without log) are kept as markers, so the
+       removal reaches other devices instead of being merged back in.
    ============================================================ */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -66,10 +74,17 @@
   function mergeLog(a, b) {
     const log = {}, logT = {};
     const al = a.log || {}, bl = b.log || {}, at = a.logT || {}, bt = b.logT || {};
-    new Set([...Object.keys(al), ...Object.keys(bl)]).forEach(d => {
+    const days = new Set([...Object.keys(al), ...Object.keys(bl), ...Object.keys(at), ...Object.keys(bt)]);
+    days.forEach(d => {
       const useB = t(bt[d]) > t(at[d]);
-      const v = useB ? bl[d] : (d in al ? al[d] : bl[d]);
-      if (v > 0) { log[d] = v; logT[d] = Math.max(t(at[d]), t(bt[d])); }
+      /* A side that has touched the day (logT) but holds no count means
+         "zero", not "unknown" — that is how removing the last pomodoro
+         of a day travels between devices. */
+      const aKnows = (d in al) || (d in at);
+      const v = useB ? (bl[d] || 0) : (aKnows ? (al[d] || 0) : (bl[d] || 0));
+      if (v > 0) log[d] = v;
+      const stamp = Math.max(t(at[d]), t(bt[d]));
+      if (stamp) logT[d] = stamp;
     });
     return { log, logT };
   }
@@ -77,6 +92,22 @@
   function merge(a, b) {
     if (!a) return b;
     if (!b) return a;
+
+    /* A reset or a restored backup replaces the board wholesale. */
+    const ea = t(a.epoch), eb = t(b.epoch);
+    if (ea !== eb) {
+      const w = eb > ea ? b : a;
+      return {
+        schema: w.schema || 0,
+        epoch: t(w.epoch),
+        chapters: w.chapters || [],
+        settings: w.settings || {},
+        log: w.log || {},
+        logT: w.logT || {},
+        sessions: dedupeSessions(w.sessions || []),
+        meta: Object.assign({}, w.meta || {}, { updated: new Date().toISOString() })
+      };
+    }
 
     const byId = new Map();
     (a.chapters || []).forEach(c => byId.set(c.id, c));
@@ -93,6 +124,7 @@
 
     return {
       schema: Math.max(a.schema || 0, b.schema || 0),
+      epoch: ea,
       chapters: [...byId.values()],
       settings: settings || {},
       log: logs.log,
@@ -105,14 +137,18 @@
     };
   }
 
+  /* One record per session. If either copy marks it removed (x), the
+     removal wins, so a -1 on one device is not undone by another. */
   function dedupeSessions(all) {
-    const seen = new Set(), out = [];
+    const byKey = new Map();
     all.forEach(s => {
+      if (!s || !s.at) return;
       const k = s.at + '|' + (s.by || '') + '|' + (s.chapterId || '') + '|' + (s.book || '');
-      if (seen.has(k)) return;
-      seen.add(k); out.push(s);
+      const had = byKey.get(k);
+      if (!had || (s.x && !had.x)) byKey.set(k, s);
     });
-    out.sort((x, y) => (x.at < y.at ? -1 : 1));
+    const out = [...byKey.values()];
+    out.sort((x, y) => (x.at < y.at ? -1 : x.at > y.at ? 1 : 0));
     return out.slice(-800);
   }
 

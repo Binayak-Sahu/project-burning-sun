@@ -225,7 +225,7 @@ window.OS = window.OS || {};
       if (ch.del && ch.dt) items.push({ when: ch.dt, who: label(ch.by), kind: 'del', chapter: ch });
     });
 
-    (store.state.sessions || []).forEach(s => {
+    store.sessionsLive().forEach(s => {
       const when = s.ms || Date.parse(s.at);
       if (!when) return;
       items.push({
@@ -244,7 +244,7 @@ window.OS = window.OS || {};
   function effortByPerson(store, dateStr) {
     const day = dateStr || new Date().toLocaleDateString('en-CA');
     const out = {};
-    (store.state.sessions || []).forEach(s => {
+    store.sessionsLive().forEach(s => {
       const when = s.ms || Date.parse(s.at);
       if (!when) return;
       if (new Date(when).toLocaleDateString('en-CA') !== day) return;

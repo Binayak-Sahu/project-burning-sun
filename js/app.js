@@ -18,9 +18,26 @@
   OS.THEME_GLYPH = { day: '☀', dusk: '☾', sun: '✷' };
   OS.THEME_COLOR = { day: '#FAF9F4', dusk: '#0E1720', sun: '#17090A' };
 
+  /* When the page is embedded (for example as a claude.ai artifact) the
+     host may set data-theme="dark" or "light" on the root to say which
+     theme the viewer picked. Auto follows that first, then the system. */
+  let hostTheme = null;
+  const root = document.documentElement;
+  const readHost = () => {
+    const v = root.getAttribute('data-theme');
+    if (v === 'dark' || v === 'light') { hostTheme = v; return true; }
+    return false;
+  };
+  readHost();
+  if ('MutationObserver' in window) {
+    new MutationObserver(() => { if (readHost()) OS.applyTheme(); })
+      .observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+
   OS.resolvedTheme = function () {
     const t = S.state.settings.theme;
     if (OS.THEMES.includes(t)) return t;
+    if (hostTheme) return hostTheme === 'dark' ? 'dusk' : 'day';
     return prefersDark.matches ? 'dusk' : 'day';   // auto
   };
 
@@ -68,15 +85,18 @@
       OS.Sync.rememberPin(String(pin));
       /* Without a name every change reads as "Someone", which makes the
          activity feed useless the moment two people share a board. */
-      if (!S.who()) {
-        const name = prompt('Your name, so the board can show who did what:', '');
-        if (name && name.trim()) S.setWho(name);
-      }
       OS.render();
+      if (!S.who()) {
+        setTimeout(() => OS.ask.text('Your name, so the board can show who did what', '', name => {
+          if (name && name.trim()) { S.setWho(name); OS.render(); toast('Hi, ' + S.who(), 'good'); }
+        }, { maxlength: 24, cancel: 'Skip' }), 0);
+      }
       toast(OS.Sync.mode === 'shared'
         ? 'Editing on — changes go to everyone'
         : 'Editing on — click any dot to change it', 'good');
-      OS.Sync.pull();
+      /* Pull first, then send anything this device did while locked
+         (pomodoros logged without the PIN), merged on the server. */
+      Promise.resolve(OS.Sync.pull()).then(() => { if (S.unlocked) OS.Sync.schedulePush(); });
     });
   }
 
@@ -86,7 +106,15 @@
   OS.Views.readHash();
 
   S.on(() => OS.render());
+  OS.Timer.restore();          // picks up a timer that was running before a reload
   OS.render();
+
+  /* "Today" moves at midnight even if nobody touches the page. */
+  (function scheduleMidnight() {
+    const n = new Date();
+    const next = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 5);
+    setTimeout(() => { OS.render(); scheduleMidnight(); }, next - n);
+  })();
 
   /* Any local mutation queues a push. Store.adopt() also emits, so the
      flag guards against a pull echoing straight back out. */
@@ -169,7 +197,7 @@
     if (k === 't') { e.preventDefault(); OS.toggleTheme(); return; }
     if (k === 'p') {
       e.preventDefault();
-      OS.Timer.endsAt ? OS.Timer.pause() : OS.Timer.start('focus');
+      OS.Timer.toggle();
       return;
     }
     if (['1', '2', '3', '4'].includes(e.key)) {
@@ -181,15 +209,25 @@
   });
 
 
-  /* ---------- warn before losing a running pomodoro ---------- */
-  window.addEventListener('beforeunload', e => {
-    if (OS.Timer.endsAt && OS.Timer.phase === 'focus') { e.preventDefault(); e.returnValue = ''; }
-  });
+  /* No "leave this page?" warning any more: a running pomodoro is saved
+     on the device and carries on (or gets logged) when the page reopens. */
 
   /* ---------- service worker ---------- */
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(() => { /* fine without it */ });
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        /* A new version was deployed: say so instead of silently running
+           the old one until the next visit. */
+        reg.addEventListener('updatefound', () => {
+          const w = reg.installing;
+          if (!w) return;
+          w.addEventListener('statechange', () => {
+            if (w.state === 'installed' && navigator.serviceWorker.controller) {
+              toast('A new version is ready — reload to use it', 'good');
+            }
+          });
+        });
+      }).catch(() => { /* fine without it */ });
     });
   }
 })();
