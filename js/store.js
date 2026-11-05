@@ -201,10 +201,17 @@ window.OS = window.OS || {};
           if (!OS.bookApplies(b.key, ch.subject)) { delete ch.books[b.key]; return; }
           const cell = ch.books[b.key];
           if (!cell) {
-            ch.books[b.key] = { s: 'NYS', e: Math.max(C.POMO_MIN, Math.round(C.POMO_BASE * ch.w * b.mult)), t: 0 };
+            ch.books[b.key] = { s: 'NYS', e: OS.estimateFor(ch, b.key), t: 0 };
           } else {
             if (!C.STATUS_BY_KEY[cell.s]) cell.s = 'NYS';
-            if (!(cell.e > 0)) cell.e = Math.max(C.POMO_MIN, Math.round(C.POMO_BASE * ch.w * b.mult));
+            /* 0 is a valid hand-set estimate ("nothing to do here"). */
+            if (!(cell.e > 0) && !cell.em) cell.e = OS.estimateFor(ch, b.key);
+            /* Estimate model v2: an estimate still equal to what the old
+               flat formula gave was never set by hand, so it moves to the
+               new model. Hand-set estimates (em) are left alone. The cell's
+               stamp is not touched, so this never outranks a real edit made
+               on another device; every device makes the same swap. */
+            else if (!cell.em && cell.e === OS.legacyEstimateFor(ch, b.key)) cell.e = OS.estimateFor(ch, b.key);
             cell.t = cell.t || 0;
           }
         });
@@ -321,6 +328,7 @@ window.OS = window.OS || {};
       const ch = this.chapter(id); if (!ch || !ch.books[book]) return;
       this.snapshot();
       ch.books[book].e = Math.max(0, Math.min(99, Math.round(pomos) || 0));
+      ch.books[book].em = 1;           // set by hand: the estimate model leaves it alone
       ch.books[book].t = now();
       ch.books[book].by = who();
       this.persist(); this.emit();
