@@ -47,8 +47,39 @@ OS.CONFIG = {
   CODE: { C: 'Completed', P: 'In Progress', D: 'Doubts', N: 'NYS' },
 
   /* Effort currency */
-  POMO_BASE: 4,          // pomodoros for an average chapter in an average book
+  POMO_BASE: 4,          // legacy flat model, kept only to recognise old estimates
   POMO_MIN: 1,
+
+  /* Estimate model (v2): pomodoros for a full first pass of an average
+     chapter (weight 1.0) in each book, per subject. A chapter's estimate
+     is  POMO_PLAN[subject][book] x weight x STRENGTH[area], rounded,
+     minimum 1. These are judgement calls, not question counts; edit
+     them here, or override any single cell from the Est. view. */
+  POMO_PLAN: {
+    Physics:   { Exercise: 3,   Exemplar: 3,   'HC Verma': 6, IIG: 5, FIITJEE: 6, IRODOV: 8 },
+    Chemistry: { Exercise: 2.5, Exemplar: 2.5, IIG: 4, Cengage: 6 },
+    Maths:     { Exercise: 5,   Exemplar: 3.5, IIG: 5, FIITJEE: 6, Cengage: 7 }
+  },
+
+  /* How fast this student moves through each area: below 1 is a
+     strength, above 1 a weak area that needs more time per problem. */
+  STRENGTH: {
+    'Maths': 0.85,
+    'Physical Chemistry': 0.9,
+    'Inorganic Chemistry': 1.0,
+    'Physics 11': 1.0,
+    'Physics 12': 1.25,
+    'Organic Chemistry': 1.3
+  },
+
+  /* Chemistry chapters by branch; anything not listed is Inorganic. */
+  PHYSICAL_CHEM: ['Some Basic Concepts of Chemistry', 'Structure of Atom', 'Redox Reactions',
+    'Thermodynamics', 'Equilibrium', 'States of Matter', 'Solutions', 'Electrochemistry',
+    'Chemical Kinetics', 'Surface Chemistry'],
+  ORGANIC_CHEM: ['Organic Chemistry – Some Basic Principles and Techniques', 'Hydrocarbons',
+    'Haloalkanes and Haloarenes', 'Alcohols, Phenols and Ethers',
+    'Aldehydes, Ketones and Carboxylic Acids', 'Amines', 'Biomolecules', 'Polymers',
+    'Chemistry in Everyday Life'],
   DEFAULT_MINUTES: 50,   // one unit of effort
   DEFAULT_BREAK: 10,
   DEFAULT_CAPACITY: 8,   // pomodoros you can realistically log per day
@@ -62,6 +93,34 @@ OS.CONFIG = {
 
 /* Convenience lookups */
 OS.CONFIG.BOOK_KEYS = OS.CONFIG.BOOKS.map(b => b.key);
+
+/* Which strength area a chapter belongs to. */
+OS.areaOf = function (ch) {
+  const C = OS.CONFIG;
+  if (ch.subject === 'Maths') return 'Maths';
+  if (ch.subject === 'Physics') return ch.cls === 12 ? 'Physics 12' : 'Physics 11';
+  if (C.PHYSICAL_CHEM.includes(ch.name)) return 'Physical Chemistry';
+  if (C.ORGANIC_CHEM.includes(ch.name)) return 'Organic Chemistry';
+  return 'Inorganic Chemistry';
+};
+
+/* Pomodoros for a full pass of one chapter in one book. */
+OS.estimateFor = function (ch, bookKey) {
+  const C = OS.CONFIG;
+  const base = (C.POMO_PLAN[ch.subject] || {})[bookKey];
+  const b = C.BOOK_BY_KEY[bookKey];
+  const per = base != null ? base : C.POMO_BASE * (b ? b.mult : 1);   // unknown pairs fall back
+  const k = C.STRENGTH[OS.areaOf(ch)] || 1;
+  return Math.max(C.POMO_MIN, Math.round(per * (ch.w || 1) * k));
+};
+
+/* The estimate the first version of the board gave this cell. Used
+   once per load to swap untouched old estimates for the new model. */
+OS.legacyEstimateFor = function (ch, bookKey) {
+  const C = OS.CONFIG;
+  const b = C.BOOK_BY_KEY[bookKey];
+  return Math.max(C.POMO_MIN, Math.round(C.POMO_BASE * (ch.w || 1) * (b ? b.mult : 1)));
+};
 OS.CONFIG.BOOK_BY_KEY = Object.fromEntries(OS.CONFIG.BOOKS.map(b => [b.key, b]));
 OS.CONFIG.STATUS_BY_KEY = Object.fromEntries(OS.CONFIG.STATUSES.map(s => [s.key, s]));
 OS.CONFIG.STATUS_KEYS = OS.CONFIG.STATUSES.map(s => s.key);

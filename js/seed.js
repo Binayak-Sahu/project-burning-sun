@@ -4,7 +4,7 @@
    Each entry is [name, weight, bookCodes, coverageCodes].
 
      weight        1.0 is an average chapter; drives the default
-                   estimate, POMO_BASE x weight x book multiplier.
+                   estimate (see POMO_PLAN and STRENGTH in config.js).
      bookCodes     one letter per book that applies to this subject,
                    in BOOKS order. Physics: Exercise, Exemplar,
                    HC Verma, IIG, FIITJEE, IRODOV. Chemistry:
@@ -147,7 +147,7 @@ OS.buildSeedChapters = function () {
           slot++;
           books[b.key] = {
             s: (code && C.CODE[code]) || 'NYS',
-            e: Math.max(C.POMO_MIN, Math.round(C.POMO_BASE * w * b.mult)),
+            e: OS.estimateFor({ subject, cls, name, w }, b.key),
             t: 0
           };
         });
